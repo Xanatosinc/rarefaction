@@ -2,9 +2,9 @@
 
 IMAGE="paranvio"
 
-GENE_LIST_DIR="/home/larkinsa/I09_allmeta/CallerIds/caller-splits"
-BAMS_DIR="/home/larkinsa/I09_allmeta/BAMS"
-DB="/home/larkinsa/I09_allmeta/AllFileAnalysis/ProSynSAR_GDB_reformat.db"
+GENE_LIST_DIR=""
+BAMS_DIR=""
+DB=""
 OUTPUT_DIR="./output"
 
 
