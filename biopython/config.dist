@@ -1,0 +1,4 @@
+#!/usr/bin/env make
+
+FASTA_DIR=
+OUTPUT_DIR=

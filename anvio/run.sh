@@ -1,11 +1,13 @@
 #!/bin/bash
 
-IMAGE="paranvio"
+IMAGE="anvio-parallel"
 
-GENE_LIST_DIR="/home/larkinsa/I09_allmeta/CallerIds/caller-splits"
-BAMS_DIR="/home/larkinsa/I09_allmeta/BAMS"
-DB="/home/larkinsa/I09_allmeta/AllFileAnalysis/ProSynSAR_GDB_reformat.db"
-OUTPUT_DIR="./output"
+if [ ! -f ./config ]; then
+	echo "config file not present"
+	exit 1
+fi
+
+. config
 
 
 if [ ! -d ${GENE_LIST_DIR} ]; then

@@ -1,0 +1,6 @@
+#!/bin/bash
+
+GENE_LIST_DIR=""
+BAMS_DIR=""
+DB=""
+OUTPUT_DIR="./output"
