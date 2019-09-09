@@ -1,12 +1,14 @@
 #!/bin/bash
 
-IMAGE="paranvio"
+IMAGE="anvio-parallel"
 
-GENE_LIST_DIR=""
-BAMS_DIR=""
-DB=""
-OUTPUT_DIR="./output"
+if [ ! -f ./config ]; then
+	echo "config file not present"
+	exit 1
+fi
 
+# Import config variables
+. config
 
 if [ ! -d ${GENE_LIST_DIR} ]; then
 	echo "gene list dir not found."
