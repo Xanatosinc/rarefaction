@@ -7,8 +7,8 @@ if [ ! -f ./config ]; then
 	exit 1
 fi
 
+# Import config variables
 . config
-
 
 if [ ! -d ${GENE_LIST_DIR} ]; then
 	echo "gene list dir not found."
