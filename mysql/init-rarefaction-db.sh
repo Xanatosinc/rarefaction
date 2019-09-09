@@ -1,5 +1,7 @@
 #!/bin/bash
 
+CONTAINER="mysql1"
+
 if [ -f ./config ]; then
 	. ./config
 else
@@ -7,12 +9,15 @@ else
 	exit 1
 fi
 
-docker exec -it mysql1 mysql -u 'root' -p"${MYSQL_ROOT_PASSWORD}" -e " \
+echo "Creating schema, granting privileges."
+docker exec -it ${CONTAINER} mysql -u 'root' -p"${MYSQL_ROOT_PASSWORD}" -e " \
 	CREATE DATABASE IF NOT EXISTS rarefaction; \
 	GRANT ALL ON rarefaction.* TO '${MYSQL_USER}'@'%'; \
 	GRANT SELECT ON *.* TO '${MYSQL_USER}'@'%'; \
 	flush privileges;"
-echo "Created schema, granted privileges."
 
-docker exec -it mysql1 mysql -u "${MYSQL_USER}" -p"${MYSQL_PASSWORD}" < sql/migration.sql
-echo "Created tables."
+echo "Creating tables."
+docker cp ./sql/migration.sql ${CONTAINER}:/migration.sql
+docker exec -it ${CONTAINER} bin/bash -c "mysql -u "${MYSQL_USER}" -p"${MYSQL_PASSWORD}" < /migration.sql"
+
+echo "Done."
