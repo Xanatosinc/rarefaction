@@ -9,7 +9,7 @@ config:
 	fi
 
 run: config
-	docker run --rm -it \
+	docker run --rm -d \
 		-v ${FASTA_DIR}:/fastas:Z \
 		-v ${OUTPUT_DIR}:/output:Z \
 		biopy-rare:latest 
