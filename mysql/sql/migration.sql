@@ -8,21 +8,21 @@ SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,N
 -- Schema mydb
 -- -----------------------------------------------------
 -- -----------------------------------------------------
--- Schema rarefaction
+-- Schema #MYSQL_DB#
 -- -----------------------------------------------------
 
 -- -----------------------------------------------------
--- Schema rarefaction
+-- Schema #MYSQL_DB#
 -- -----------------------------------------------------
-CREATE SCHEMA IF NOT EXISTS `rarefaction` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci ;
-USE `rarefaction` ;
+CREATE SCHEMA IF NOT EXISTS `#MYSQL_DB#` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci ;
+USE `#MYSQL_DB#` ;
 
 -- -----------------------------------------------------
--- Table `rarefaction`.`contigs`
+-- Table `#MYSQL_DB#`.`contigs`
 -- -----------------------------------------------------
-CREATE TABLE IF NOT EXISTS `rarefaction`.`contigs` (
+CREATE TABLE IF NOT EXISTS `#MYSQL_DB#`.`contigs` (
 	  `id` INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
-	  `name` VARCHAR(45) NULL DEFAULT NULL,
+	  `name` VARCHAR(191) NULL DEFAULT NULL,
 	  PRIMARY KEY (`id`),
 	  UNIQUE INDEX `name_UNIQUE` (`name` ASC) VISIBLE)
 	ENGINE = InnoDB
@@ -31,11 +31,11 @@ CREATE TABLE IF NOT EXISTS `rarefaction`.`contigs` (
 
 
 	-- -----------------------------------------------------
--- Table `rarefaction`.`stations`
+-- Table `#MYSQL_DB#`.`stations`
 -- -----------------------------------------------------
-CREATE TABLE IF NOT EXISTS `rarefaction`.`stations` (
+CREATE TABLE IF NOT EXISTS `#MYSQL_DB#`.`stations` (
 	  `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT,
-	  `name` VARCHAR(6) NOT NULL,
+	  `name` VARCHAR(12) NOT NULL,
 	  PRIMARY KEY (`id`),
 	  UNIQUE INDEX `name_UNIQUE` (`name` ASC) VISIBLE)
 	ENGINE = InnoDB
@@ -44,10 +44,10 @@ CREATE TABLE IF NOT EXISTS `rarefaction`.`stations` (
 
 
 	-- -----------------------------------------------------
--- Table `rarefaction`.`gene_reads`
+-- Table `#MYSQL_DB#`.`gene_reads`
 -- -----------------------------------------------------
-CREATE TABLE IF NOT EXISTS `rarefaction`.`gene_reads` (
-	  `id` INT(10) UNSIGNED NOT NULL,
+CREATE TABLE IF NOT EXISTS `#MYSQL_DB#`.`gene_reads` (
+	  `id` INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
 	  `gene_id` INT(10) UNSIGNED NOT NULL,
 	  `read_number` INT(10) UNSIGNED NOT NULL,
 	  `station_id` INT(10) UNSIGNED NOT NULL,
@@ -55,15 +55,15 @@ CREATE TABLE IF NOT EXISTS `rarefaction`.`gene_reads` (
 	  `read_length` INT(10) UNSIGNED NOT NULL,
 	  `gc_content` DECIMAL(4,2) UNSIGNED NOT NULL,
 	  PRIMARY KEY (`id`),
-	  UNIQUE INDEX `gene_read_unique` (`gene_id` ASC, `read_number` ASC) VISIBLE,
+	  UNIQUE INDEX `gene_read_station_unique` (`gene_id` ASC, `read_number` ASC, `station_id` ASC) VISIBLE,
 	  INDEX `station_fk_idx` (`station_id` ASC) VISIBLE,
 	  INDEX `contig_fk_idx` (`contig_id` ASC) VISIBLE,
 	  CONSTRAINT `contig_fk`
 	    FOREIGN KEY (`contig_id`)
-	    REFERENCES `rarefaction`.`contigs` (`id`),
+	    REFERENCES `#MYSQL_DB#`.`contigs` (`id`),
 	  CONSTRAINT `station_fk`
 	    FOREIGN KEY (`station_id`)
-	    REFERENCES `rarefaction`.`stations` (`id`))
+	    REFERENCES `#MYSQL_DB#`.`stations` (`id`))
 	ENGINE = InnoDB
 	DEFAULT CHARACTER SET = utf8mb4
 	COLLATE = utf8mb4_0900_ai_ci;

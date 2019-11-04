@@ -1,7 +1,10 @@
 #!/usr/bin/env make
 
-CFG=""
-DATA=""
+CWD=$(shell pwd)
+CFG="${CWD}/my.cnf"
+DATA="${CWD}/data"
+
+MYSQL_DB=""
 MYSQL_USER=""
 MYSQL_PASSWORD=""
 MYSQL_ROOT_PASSWORD=""
