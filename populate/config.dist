@@ -1,0 +1,7 @@
+#!/usr/bin/env make
+
+INPUT_TSV=
+
+MYSQL_USER=
+MYSQL_PASS=
+MYSQL_DB=
