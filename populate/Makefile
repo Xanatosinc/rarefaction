@@ -11,7 +11,7 @@ run:
 		-e MYSQL_DB=${MYSQL_DB} \
 		-e MYSQL_USER=${MYSQL_USER} \
 		-e MYSQL_PASS=${MYSQL_PASS} \
-		-v ${PWD}/src:/app/src/:Z \
-		-v ${INPUT_DIR}:/app/data/:Z,ro \
+		-v ${PWD}/src:/app/src/:z,ro \
+		-v ${INPUT_DIR}:/app/data/:z,ro \
 		populate-db \
 		sh

@@ -54,15 +54,25 @@ for id, name in cur.fetchall():
     stations[name] = id
 print("%s initial stations" % len(stations))
 
-# Load existing Records into memory
+## Load existing Records (from this file) into memory
 sys.stdout.write('Loading Records: ')
-cur.execute('SELECT id, gene_id, read_number, station_id FROM gene_reads')
-for id, geneId, readNumber, stationId in cur.fetchall():
+for line in open(filename, 'r'):
+    record = line.strip().split('\t')
+    checkRecord = record[0].split('/')[-1]
+    station = record[1]
+    (geneId, readNumber) = checkRecord.split('_')
+    readNumber  = str(int(readNumber))
+    stationId = stations[station]
     records.append(str(geneId) + '_' + str(readNumber) + '_' + str(stationId))
+#cur.execute('SELECT id, gene_id, read_number, station_id FROM gene_reads')
+#for id, geneId, readNumber, stationId in cur.fetchall():
+#    records.append(str(geneId) + '_' + str(readNumber) + '_' + str(stationId))
 print("%s initial records" % len(records))
 
 # Process .tsv file
 print('Processing '+filename)
+buff = 0
+sqlValues = []
 for line in open(filename, 'r'):
     record = line.strip().split('\t')
     checkRecord = record[0].split('/')[-1]
@@ -80,6 +90,7 @@ for line in open(filename, 'r'):
     # Check Record Index
     if geneId + '_' + readNumber + '_' + str(stations[station]) in records:
         continue
+    records.append(str(geneId) + '_' + str(readNumber) + '_' + str(stationId))
 
     # Check Contig
     contig = record[3]
@@ -89,15 +100,37 @@ for line in open(filename, 'r'):
     else:
         contigId = contigs[contig]
 
-    cur.execute("""
+    # gc_content can't be 100 in db
+    if float(record[5]) == 100:
+        record[5] = '99.9'
+
+    sqlValues.append(
+        "(%s, %s, %s, %s, %s, %s)" % (
+            geneId, readNumber, stationId, contigId, record[4], record[5]
+        )
+    )
+    if buff == 999:
+        sql = """
+            INSERT INTO gene_reads
+                (gene_id, read_number, station_id, contig_id, read_length, gc_content)
+            VALUES
+            (%s, %s, %s, %s, %s, %s)
+        """ + ', '.join(sqlValues)
+        cur.execute(sql)
+        con.commit()
+        sqlValues = []
+        buff = 0
+    else:
+        buff += 1
+if buff != 0:
+    sql = """
         INSERT INTO gene_reads
             (gene_id, read_number, station_id, contig_id, read_length, gc_content)
         VALUES
-            (%s, %s, %s, %s, %s, %s)
-        """, ( geneId, readNumber, stationId, contigId, record[4], record[5])
-    )
+        (%s, %s, %s, %s, %s, %s)
+    """ + ', '.join(sqlValues)
+    cur.execute(sql)
     con.commit()
-    records.append(str(geneId) + '_' + str(readNumber) + '_' + str(stationId))
 cur.close()
 con.close()
 print()
