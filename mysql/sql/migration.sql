@@ -18,11 +18,25 @@ CREATE SCHEMA IF NOT EXISTS `#MYSQL_DB#` DEFAULT CHARACTER SET utf8mb4 COLLATE u
 USE `#MYSQL_DB#` ;
 
 -- -----------------------------------------------------
+-- Table `#MYSQL_DB#`.`ecotypes`
+-- -----------------------------------------------------
+CREATE TABLE `rarefaction_I09`.`ecotypes` (
+	  `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT,
+	  `name` VARCHAR(191) NULL,
+	  PRIMARY KEY (`id`),
+	  UNIQUE INDEX `name_UNIQUE` (`name` ASC) VISIBLE);
+	ENGINE = InnoDB
+	DEFAULT CHARACTER SET = utf8mb4
+	COLLATE = utf8mb4_0900_ai_ci;
+
+
+-- -----------------------------------------------------
 -- Table `#MYSQL_DB#`.`contigs`
 -- -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS `#MYSQL_DB#`.`contigs` (
-	  `id` INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
+	  `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT,
 	  `name` VARCHAR(191) NULL DEFAULT NULL,
+	  `ecotype_id` INT(11) UNSIGNED,
 	  PRIMARY KEY (`id`),
 	  UNIQUE INDEX `name_UNIQUE` (`name` ASC) VISIBLE)
 	ENGINE = InnoDB
