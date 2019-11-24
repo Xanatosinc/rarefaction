@@ -1,4 +1,4 @@
-# MySQL
+# DB-Init
 
 Create docker container running mysql server on host port 8036.
 Generates and authenticates, and creates tables for schema defined in config.

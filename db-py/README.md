@@ -1,4 +1,8 @@
-# Populate
+# DB-Py
+
+Docker container to run Python scripts to populate, then use, the database.
+
+## Populate
 
 Script to populate mysql database with data from biopython output. Namely, the .tsv file containing the following columns:
 `[gene_id]_[read_number]`
@@ -16,3 +20,13 @@ Run `make build` to build image, `make run` to run container with shell.
 
 For now, use a bash for loop within the container to populate the db with the included python script, eg.:
 `for file in $(ls /app/data/*) ; do python src/populate.py ${file} ; done`
+
+
+## Rarefy
+
+Read the data from the database and generate a series of matrices, one per ecotype, showing the coverage for each gene at each station.
+
+Each gene-station's coverage is an aggregate of a random subsample of gene reads, defined by a particular depth.
+
+For each station in each ecotype, if the total number of station's reads is less than a defined threshold, it is skipped.
+
