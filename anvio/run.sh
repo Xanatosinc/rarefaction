@@ -27,11 +27,10 @@ if [ ! -d ${OUTPUT_DIR} ]; then
 	exit 1
 fi
 
-starting_port=8080
 port_offest=0
 for gene_list in $(ls $GENE_LIST_DIR)
 do
-	port=$((port_offset+${starting_port}))
+	port=$((port_offset+${STARTING_PORT}))
 	((port_offset++))
 	docker run \
 		--name ${gene_list} \
@@ -40,6 +39,6 @@ do
 		-v ${DB}:/app/db.db:z \
 		-v ${OUTPUT_DIR}:/output:z \
 		-w /app \
-		-p $port:8080 \
+		-p $port:${CONTAINER_PORT} \
 		${IMAGE} &
 done

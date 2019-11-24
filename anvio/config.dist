@@ -3,4 +3,10 @@
 GENE_LIST_DIR=""
 BAMS_DIR=""
 DB=""
+
+# Range of ports above the starting port will be used -- check availability first, as
+# collisions are NOT handled well.
+STARTING_PORT=8081
+CONTAINER_PORT=8080
+
 OUTPUT_DIR="./output"
