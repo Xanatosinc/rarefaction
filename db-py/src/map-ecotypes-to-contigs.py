@@ -8,7 +8,7 @@ from mysql.connector import connect
 import os, sys
 
 if len(sys.argv) !=2:
-    exit('Usage: map-contigs.py INPUT.tsv')
+    exit('Usage: map-ecotypes-to-contigs.py INPUT.tsv')
 
 filename = sys.argv[1]
 
@@ -49,7 +49,7 @@ for line in open(filename, 'r'):
 # SELECT Contigs, execute UPDATEs / INSERTs
 insertedEcotypes = {} # name => id
 sys.stdout.write('Loading Contigs: ')
-cur.execute('SELECT id, name from contigs')
+cur.execute('SELECT id, name FROM contigs')
 for contigId, contigName in cur.fetchall():
     genotype = contigName.split('_')[0]
     if genotype in ecotypeGenotypeDict:

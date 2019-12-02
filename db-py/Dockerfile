@@ -1,8 +1,11 @@
-FROM python:3.8-alpine
+FROM alpine-pandas
 
 WORKDIR /app
 
-RUN apk update && \
-	pip install mysql-connector-python
+COPY requirements.txt /app/requirements.txt
 
-COPY cmd /app/cmd
+RUN apk update && \
+	pip install -r /app/requirements.txt && \
+	pip install dask[dataframe]
+
+COPY cmd-populate /app/cmd-populate

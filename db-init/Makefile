@@ -1,8 +1,6 @@
 CWD=$(shell pwd)
 include ./config
 
-CONTAINER=mysql1
-
 init:
 	@docker run \
 		--name ${CONTAINER} \
