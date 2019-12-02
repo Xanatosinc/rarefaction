@@ -12,7 +12,7 @@ init:
 		-e MYSQL_PASSWORD=${MYSQL_PASSWORD} \
 		-e MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD} \
 		-p 8036:3306 \
-		mysql/mysql-server
+		mysql/mysql-server:8.0
 
 populate:
 	./init-rarefaction-db.sh

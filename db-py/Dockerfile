@@ -5,7 +5,6 @@ WORKDIR /app
 COPY requirements.txt /app/requirements.txt
 
 RUN apk update && \
-	pip install -r /app/requirements.txt && \
-	pip install dask[dataframe]
+	pip install -r /app/requirements.txt
 
 COPY cmd-populate /app/cmd-populate
