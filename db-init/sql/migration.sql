@@ -44,7 +44,7 @@ CREATE TABLE IF NOT EXISTS `#MYSQL_DB#`.`contigs` (
 	COLLATE = utf8mb4_0900_ai_ci;
 
 
-	-- -----------------------------------------------------
+-- -----------------------------------------------------
 -- Table `#MYSQL_DB#`.`stations`
 -- -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS `#MYSQL_DB#`.`stations` (
@@ -57,7 +57,7 @@ CREATE TABLE IF NOT EXISTS `#MYSQL_DB#`.`stations` (
 	COLLATE = utf8mb4_0900_ai_ci;
 
 
-	-- -----------------------------------------------------
+-- -----------------------------------------------------
 -- Table `#MYSQL_DB#`.`gene_reads`
 -- -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS `#MYSQL_DB#`.`gene_reads` (
@@ -87,3 +87,15 @@ CREATE TABLE IF NOT EXISTS `#MYSQL_DB#`.`gene_reads` (
 	SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS;
 	SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS;
 
+-- -----------------------------------------------------
+-- Table `#MYSQL_DB#`.`gene_reads`
+-- -----------------------------------------------------
+CREATE TABLE `gene_ref_lengths` (
+	  `gene_id` mediumint(8) unsigned NOT NULL AUTO_INCREMENT,
+	  `length` smallint(5) unsigned NOT NULL,
+	  PRIMARY KEY (`gene_id`),
+	  UNIQUE KEY `gene_id_UNIQUE` (`gene_id`)
+	)
+	ENGINE = InnoDB
+	DEFAULT CHAR SET = utf8mb4
+	COLLATE=utf8mb4_0900_ai_ci;
