@@ -8,8 +8,7 @@
 STATION_READ_MIN = 10000
 
 # Number of gene_reads randomly sampled per station per ecotype
-#DEPTHS = (10000, 25000, 50000, 75000, 100000)
-DEPTHS = [10000]
+DEPTHS = (10000, 25000, 50000, 75000, 100000)
 
 from mysql.connector import connect
 import os, pandas as pd, sys
@@ -39,10 +38,6 @@ for ecotypeId, ecotypeName in cur.fetchall():
 if ECOTYPE not in ecotypes:
     exit('Ecotype ' + ECOTYPE + ' not found in database. Ecotypes found: ' + ecotypes.keys().join(', '))
 
-# Fetch genes
-cur.execute('SELECT DISTINCT gene_id FROM gene_reads')
-genes = cur.fetchall()
-
 # Fetch data
 print('fetching joined gene_reads data')
 df = pd.read_sql('''
@@ -58,23 +53,19 @@ df = pd.read_sql('''
 
 # Length of genes based on reference sequence
 geneLengths = pd.read_sql('SELECT gene_id, length FROM gene_ref_lengths', con=con).set_index('gene_id')
-print(geneLengths)
-
-# Fetch stations
-stations = {} # name => id
-cur.execute('SELECT id, name FROM stations')
-
-print('Iterating through stations')
 
 # Output for this script: genes x stations
 outputTables = {}
 for sampleDepth in DEPTHS:
     outputTables[sampleDepth] = pd.DataFrame(index=geneLengths.index)
 
-for stationId, stationName in cur.fetchall():
-    stations[stationName] = stationId
-    print(stationName)
+print('Iterating through stations')
 
+# Fetch stations
+cur.execute('SELECT id, name FROM stations')
+for stationId, stationName in cur.fetchall():
+
+    print(stationName)
 
     stationDf = df[df.station_name == stationName]
 
@@ -83,8 +74,9 @@ for stationId, stationName in cur.fetchall():
     if (stationReadCount > STATION_READ_MIN):
         for sampleDepth in DEPTHS:
 
-            ## TODO: If stationReadCount < sampleDepth, zerofill the entire station
+            # If stationReadCount < sampleDepth, zerofill the station
             if stationReadCount < sampleDepth:
+                print('station had fewer than sampleDepth (' + sampleDepth + ') reads')
                 outputTables[sampleDepth][stationName] = 0
                 break
 
@@ -97,18 +89,26 @@ for stationId, stationName in cur.fetchall():
             # The number of gene_reads for this gene in this station
             uniqueGeneCount = sampleDf['gene_id'].nunique()
 
-            # Join sums of read lengths with gene reference lengths
-            grls = geneReadLengthSums.join(geneLengths, how='inner')
-            outputTables[sampleDepth][stationName] = grls['sum'] / grls['length']
-            grls['coverage'] = grls['sum'] / grls['length']
-            print('summary data for ' + stationName)
-            print(outputTables[sampleDepth].dropna(subset=[stationName]))
+            # Join sums of read lengths with gene reference lengths, so it has two columns: sum and length
+            grls = geneReadLengthSums.join(geneLengths, how='right')
+            grls.fillna(0, downcast='infer', inplace=True)
 
+            # Populate the output dataframe's stationName column with the calculated coverage
+            outputTables[sampleDepth][stationName] = grls['sum'] / grls['length']
+            outputTables[sampleDepth] = outputTables[sampleDepth].round(4)
+#            print('summary data for ' + stationName)
+#            print(outputTables[sampleDepth].dropna(subset=[stationName])[stationName])
+
+    # If station's read count is less than threshold, zerofill
     else:
+        print('Station had fewer reads than threshold')
         outputTables[sampleDepth][stationName] = 0
+
+cur.close()
+con.close()
 
 for sampleDepth in DEPTHS:
     fileOutName = OUTPUT_DIR + '/' + ECOTYPE + '_' + str(sampleDepth) + '.tsv'
-    print('file out would be ' + fileOutName)
-#    fileOut = open('w', fileOutName)
-#    outputTables[sampleDepth].to_csv(fileOut, sep='\t')
+    print('Writing to file ' + fileOutName)
+    fileOut = open(fileOutName, 'w')
+    outputTables[sampleDepth].to_csv(fileOut, sep='\t')
