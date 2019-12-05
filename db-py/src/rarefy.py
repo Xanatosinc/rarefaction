@@ -9,19 +9,16 @@ STATION_READ_MIN = 0 # TODO: Deprecated
 
 # Number of gene_reads randomly sampled per station per ecotype
 DEPTHS = [10000, 25000, 50000, 75000, 100000]
-#DEPTHS = [1000]
 
 import multiprocessing as mp
 from mysql.connector import connect
 import os, pandas as pd, sys
 
 
-def populateOutputTable(df, sampleDepth, stationName, geneLengths):
-#    print(stationName)
-
+def populateOutputTable(df, sampleDepth, stationId, stationName, geneLengths):
     outputSeries = pd.Series(index=geneLengths.index)
     outputSeries.values[:] = 0
-    stationDf = df[df.station_name == stationName]
+    stationDf = df[df.station_id == stationId]
     stationReadCount = len(stationDf.index)
 
     # If stationReadCount < sampleDepth, zerofill the station
@@ -47,21 +44,21 @@ def populateOutputTable(df, sampleDepth, stationName, geneLengths):
     outputSeries = grls['sum'] / grls['length']
     outputSeries = outputSeries.round(4)
 
-#    print('summary data for ' + stationName)
-#    print(outputSeries[outputSeries != 0])
-
     return outputSeries
 
 
 def main():
-    if len(sys.argv) != 2:
+    if len(sys.argv) not in (2, 3):
         exit('Usage: rarefy.py ECOTYPE')
 
     ECOTYPE = sys.argv[1]
     OUTPUT_DIR = '/app/output'
 
+    # If second argument is given, use as suffix for file name (eg. a, b, c...)
+    FILE_SUFFIX = '_' + sys.argv[2] if len(sys.argv) == 3 else ''
+
     if not (os.access(OUTPUT_DIR, os.W_OK) and os.path.isdir(OUTPUT_DIR)):
-        exit('Problem with output directory ' + OUTPUT_DIR + '. Ensure it exists and is writeable.')
+        exit('Problem with output directory %s. Ensure it exists and is writeable.' % OUTPUT_DIR)
 
     # Connect to MySQL DB
     con = connect(
@@ -81,12 +78,20 @@ def main():
 
     ecotypeId = ecotypes[ECOTYPE]
 
+    # Length of genes based on reference sequence
+    print('Fetching Gene Lengths')
+    geneLengths = pd.read_sql('SELECT gene_id, length FROM genes WHERE ecotype_id = %s' % ecotypeId, con=con).set_index('gene_id')
+
+    # Fetch stations
+    print('Fetching Stations')
+    cur.execute('SELECT id, name FROM stations')
+    stations = {id: name for id, name in cur.fetchall()}
+
     # Fetch data
     print('Fetching joined gene_reads data')
     df = pd.read_sql('''
-        SELECT gr.gene_id, s.name station_name, gr.read_length FROM gene_reads gr
+        SELECT gr.gene_id, gr.station_id station_id, gr.read_length FROM gene_reads gr
         LEFT JOIN genes g ON g.gene_id = gr.gene_id
-        LEFT JOIN stations s ON s.id = gr.station_id
         LEFT JOIN contigs c ON c.id = gr.contig_id
         LEFT JOIN ecotypes e ON e.id = c.ecotype_id
         WHERE 1=1
@@ -95,19 +100,6 @@ def main():
         ''' % (ECOTYPE, ecotypeId),
         con=con
     )
-
-    # Length of genes based on reference sequence
-    print('Fetching Gene Lengths')
-    geneLengths = pd.read_sql('SELECT gene_id, length FROM genes', con=con).set_index('gene_id')
-
-    # Output for this script: genes x stations
-    outputTables = {}
-    for sampleDepth in DEPTHS:
-        outputTables[sampleDepth] = pd.DataFrame(index=geneLengths.index)
-
-    # Fetch stations
-    cur.execute('SELECT id, name FROM stations')
-    stations = {id: name for id, name in cur.fetchall()}
 
     cur.close()
     con.close()
@@ -123,11 +115,10 @@ def main():
 #            outputTable = pd.concat(results)
 
         for stationId, stationName in stations.items():
-            outputTable[stationName] = populateOutputTable(df, sampleDepth, stationName, geneLengths)
+            outputTable[stationName] = populateOutputTable(df, sampleDepth, stationId, stationName, geneLengths)
 
-        fileOutName = OUTPUT_DIR + '/' + ECOTYPE + '_' + str(sampleDepth) + '.tsv'
+        fileOutName = OUTPUT_DIR + '/' + ECOTYPE + '_' + str(sampleDepth) + FILE_SUFFIX + '.tsv'
         print('Writing to file: ' + fileOutName)
-        print(outputTable)
 #        print(
 #            outputTable[(outputTable.T != 0).all()] # This is slow
 #        )
