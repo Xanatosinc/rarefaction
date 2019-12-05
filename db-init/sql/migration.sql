@@ -20,8 +20,8 @@ USE `#MYSQL_DB#` ;
 -- -----------------------------------------------------
 -- Table `#MYSQL_DB#`.`ecotypes`
 -- -----------------------------------------------------
-CREATE TABLE `rarefaction_I09`.`ecotypes` (
-	  `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT,
+CREATE TABLE `#MYSQL_DB#`.`ecotypes` (
+	  `id` SMALLINT(5) UNSIGNED NOT NULL AUTO_INCREMENT,
 	  `name` VARCHAR(191) NULL,
 	  PRIMARY KEY (`id`),
 	  UNIQUE INDEX `name_UNIQUE` (`name` ASC) VISIBLE);
@@ -34,9 +34,9 @@ CREATE TABLE `rarefaction_I09`.`ecotypes` (
 -- Table `#MYSQL_DB#`.`contigs`
 -- -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS `#MYSQL_DB#`.`contigs` (
-	  `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT,
-	  `name` VARCHAR(191) NULL DEFAULT NULL,
-	  `ecotype_id` INT(11) UNSIGNED,
+	  `id` SMALLINT(8) UNSIGNED NOT NULL AUTO_INCREMENT,
+	  `name` VARCHAR(191) NOT NULL,
+	  `ecotype_id` SMALLINT(8) UNSIGNED NOT NULL,
 	  PRIMARY KEY (`id`),
 	  UNIQUE INDEX `name_UNIQUE` (`name` ASC) VISIBLE)
 	ENGINE = InnoDB
@@ -48,7 +48,7 @@ CREATE TABLE IF NOT EXISTS `#MYSQL_DB#`.`contigs` (
 -- Table `#MYSQL_DB#`.`stations`
 -- -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS `#MYSQL_DB#`.`stations` (
-	  `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT,
+	  `id` SMALLINT(8) UNSIGNED NOT NULL AUTO_INCREMENT,
 	  `name` VARCHAR(12) NOT NULL,
 	  PRIMARY KEY (`id`),
 	  UNIQUE INDEX `name_UNIQUE` (`name` ASC) VISIBLE)
@@ -62,10 +62,10 @@ CREATE TABLE IF NOT EXISTS `#MYSQL_DB#`.`stations` (
 -- -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS `#MYSQL_DB#`.`gene_reads` (
 	  `id` INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
-	  `gene_id` INT(10) UNSIGNED NOT NULL,
+	  `contig_id` SMALLINT(8) UNSIGNED NOT NULL,
+	  `gene_id` MEDIUMINT(8) UNSIGNED NOT NULL,
+	  `station_id` SMALLINT(8) UNSIGNED NOT NULL,
 	  `read_number` INT(10) UNSIGNED NOT NULL,
-	  `station_id` INT(10) UNSIGNED NOT NULL,
-	  `contig_id` INT(10) UNSIGNED NOT NULL,
 	  `read_length` INT(10) UNSIGNED NOT NULL,
 	  `gc_content` DECIMAL(4,2) UNSIGNED NOT NULL,
 	  PRIMARY KEY (`id`),
@@ -73,29 +73,39 @@ CREATE TABLE IF NOT EXISTS `#MYSQL_DB#`.`gene_reads` (
 	  INDEX `station_fk_idx` (`station_id` ASC) VISIBLE,
 	  INDEX `contig_fk_idx` (`contig_id` ASC) VISIBLE,
 	  CONSTRAINT `contig_fk`
-	    FOREIGN KEY (`contig_id`)
+	    FOREIGN KEY (`gene_reads_contigs`)
 	    REFERENCES `#MYSQL_DB#`.`contigs` (`id`),
 	  CONSTRAINT `station_fk`
-	    FOREIGN KEY (`station_id`)
-	    REFERENCES `#MYSQL_DB#`.`stations` (`id`))
+	    FOREIGN KEY (`gene_reads_stations`)
+	    REFERENCES `#MYSQL_DB#`.`stations` (`id`),
+	  CONSTRAINT `genes_fk`
+	    FOREIGN KEY (`gene_reads_genes`)
+	    REFERENCES `#MYSQL_DB#`.`genes` (`gene_id`)
+        )
 	ENGINE = InnoDB
 	DEFAULT CHARACTER SET = utf8mb4
 	COLLATE = utf8mb4_0900_ai_ci;
 
 
-	SET SQL_MODE=@OLD_SQL_MODE;
-	SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS;
-	SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS;
-
 -- -----------------------------------------------------
 -- Table `#MYSQL_DB#`.`gene_reads`
 -- -----------------------------------------------------
-CREATE TABLE `gene_ref_lengths` (
-	  `gene_id` mediumint(8) unsigned NOT NULL AUTO_INCREMENT,
-	  `length` smallint(5) unsigned NOT NULL,
+CREATE TABLE `genes` (
+	  `gene_id` MEDIUMINT unsigned NOT NULL AUTO_INCREMENT,
+	  `length` SMALLINT(8) unsigned NOT NULL,
+	  `ecotype_id` SMALLINT(8) unsigned NOT NULL,
 	  PRIMARY KEY (`gene_id`),
-	  UNIQUE KEY `gene_id_UNIQUE` (`gene_id`)
+	  UNIQUE KEY `gene_id_UNIQUE` (`gene_id`),
+	  CONSTRAINT `ecotype_fk`
+	    FOREIGN KEY (`genes_ecotypes`)
+	    REFERENCES `#MYSQL_DB#`.`ecotypes` (`id`)
 	)
 	ENGINE = InnoDB
 	DEFAULT CHAR SET = utf8mb4
 	COLLATE=utf8mb4_0900_ai_ci;
+
+-- -----------------------------------------------------
+
+	SET SQL_MODE=@OLD_SQL_MODE;
+	SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS;
+	SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS;
