@@ -1,66 +1,43 @@
 #!/usr/bin/env/python
 
 # rarefy.py
-#
 # Pull data from database and calculate coverage per ecotype per station per gene.
 # Stations that have a summed read_length less than the defined THRESHOLD value are ignored.
 
-# NOTE: This version queries each depth, each station -- so it uses less memory, but is SLOWER.
-# This should only be used on very large ecotypes, if the other version uses too much memory.
+# NOTE: This runs one query for the entire ecotype, which will likely use a LOT of memory,
+# but will run quickly once the query finishes.
 
 # Number of gene_read records per station per ecotype required for consideration
 STATION_READ_MIN = 0 # TODO: Deprecated
 
 # Number of gene_reads randomly sampled per station per ecotype
 DEPTHS = [10000, 25000, 50000, 75000, 100000]
-#DEPTHS = [25000, 50000, 75000, 100000]
 
 import multiprocessing as mp
-from datetime import datetime as dt
 from mysql.connector import connect
 import os, pandas as pd, sys
-import pytz
 
 
-def populateOutputTable(con, ecotypeId, sampleDepth, stationId, stationName, geneLengths):
-
-    # Simpler query through genes table
-    df = pd.read_sql('''
-        SELECT gr.gene_id, gr.station_id station_id, gr.read_length FROM gene_reads gr
-        LEFT JOIN genes g ON g.gene_id = gr.gene_id
-        LEFT JOIN ecotypes e ON e.id = g.ecotype_id
-        WHERE 1=1
-            AND gr.station_id = '%s'
-            AND g.ecotype_id = '%s'
-        ''' % (stationId, ecotypeId),
-        con=con
-    )
-
+def populateOutputTable(df, sampleDepth, stationId, stationName, geneLengths):
     outputSeries = pd.Series(index=geneLengths.index)
     outputSeries.values[:] = 0
     stationDf = df[df.station_id == stationId]
     stationReadCount = len(stationDf.index)
 
-    del df
-
     # If stationReadCount < sampleDepth, zerofill the station
     if stationReadCount < sampleDepth:
-        sys.stdout.write('\t!%s' % str(sampleDepth))
+        print('Station %s had fewer reads than sampleDepth\t(%s)' % (stationName, str(sampleDepth)))
 
         return outputSeries
 
     # Random sampling of this station's gene_reads
     sampleDf = stationDf.sample(n = sampleDepth)
 
-    del stationDf
-
     # Sums of the `read_length` column for each gene for this station
     geneReadLengthSums = sampleDf.groupby('gene_id')['read_length'].sum().reset_index(name = 'sum').set_index('gene_id')
 
     # The number of gene_reads for this gene in this station
     uniqueGeneCount = sampleDf['gene_id'].nunique()
-
-    del sampleDf
 
     # Join sums of read lengths with gene reference lengths, so it has two columns: sum and length
     grls = geneReadLengthSums.join(geneLengths, how='right')
@@ -69,10 +46,6 @@ def populateOutputTable(con, ecotypeId, sampleDepth, stationId, stationName, gen
     # Populate the output dataframe's stationName column with the calculated coverage
     outputSeries = grls['sum'] / grls['length']
     outputSeries = outputSeries.round(4)
-
-    del grls
-
-    sys.stdout.write('\t %s' % str(sampleDepth))
 
     return outputSeries
 
@@ -90,7 +63,6 @@ def main():
     if not (os.access(OUTPUT_DIR, os.W_OK) and os.path.isdir(OUTPUT_DIR)):
         exit('Problem with output directory %s. Ensure it exists and is writeable.' % OUTPUT_DIR)
 
-
     # Connect to MySQL DB
     con = connect(
         database=os.getenv('MYSQL_DB'),
@@ -105,7 +77,7 @@ def main():
     for ecotypeId, ecotypeName in cur.fetchall():
         ecotypes[ecotypeName] = ecotypeId
     if ECOTYPE not in ecotypes:
-        exit('Ecotype "%s" not found in database. Ecotypes found: %s' % (ECOTYPE, ', '.join([*ecotypes])))
+        exit('Ecotype ' + ECOTYPE + ' not found in database. Ecotypes found: ' + ecotypes.keys().join(', '))
 
     ecotypeId = ecotypes[ECOTYPE]
 
@@ -118,6 +90,8 @@ def main():
     cur.execute('SELECT id, name FROM stations')
     stations = {id: name for id, name in cur.fetchall()}
 
+    # Fetch data
+    print('Fetching joined gene_reads data')
     # Query through contig table
 #    df = pd.read_sql('''
 #        SELECT gr.gene_id, gr.station_id station_id, gr.read_length FROM gene_reads gr
@@ -130,35 +104,41 @@ def main():
 #        ''' % (ECOTYPE, ecotypeId),
 #        con=con
 #    )
-
-    # Generate blank dataframes
-    outputTables = {}
-    for sampleDepth in DEPTHS:
-        outputTables[sampleDepth] = pd.DataFrame(index=geneLengths.index)
-
-    START_TIME = dt.now(pytz.timezone('US/Pacific'))
-
-    sys.stdout.write('[%s]' % START_TIME)
-    for stationId, stationName in stations.items():
-        elapsed_seconds = round((dt.now(pytz.timezone('US/Pacific')) - START_TIME).total_seconds())
-        sys.stdout.write('\n[T+%s s]\t%s' % (str(elapsed_seconds).rjust(8, ' '), stationName))
-        for sampleDepth in DEPTHS:
-            outputTables[sampleDepth][stationName] = populateOutputTable(con, ecotypeId, sampleDepth, stationId, stationName, geneLengths)
-
-#        print(
-#            outputTable[(outputTable.T != 0).all()] # This is slow
-#        )
-    print()
-    for sampleDepth in DEPTHS:
-        fileOutName = OUTPUT_DIR + '/' + ECOTYPE + '_' + str(sampleDepth) + FILE_SUFFIX + '.tsv'
-        print('Writing to file: ' + fileOutName)
-        fileOut = open(fileOutName, 'w')
-        outputTables[sampleDepth].to_csv(fileOut, sep='\t')
-
-    del outputTables
+    # Simpler query through genes table
+    df = pd.read_sql('''
+        SELECT gr.gene_id, gr.station_id station_id, gr.read_length FROM gene_reads gr
+        LEFT JOIN genes g ON g.gene_id = gr.gene_id
+        LEFT JOIN ecotypes e ON e.id = g.ecotype_id
+        WHERE 1=1
+            AND g.ecotype_id = '%s'
+        ''' % (ecotypeId),
+        con=con
+    )
 
     cur.close()
     con.close()
+
+    for sampleDepth in DEPTHS:
+        print('\n###############\nDepth: %s\n###############\n' % str(sampleDepth))
+
+        outputTable = pd.DataFrame(index=geneLengths.index)
+
+#        with mp.Pool(16) as pool:
+#
+#            results = [pool.apply(populateOutputTable, args=(df, sampleDepth, stationName, geneLengths)) for stationName in stations.values()]
+#            outputTable = pd.concat(results)
+
+        for stationId, stationName in stations.items():
+            outputTable[stationName] = populateOutputTable(df, sampleDepth, stationId, stationName, geneLengths)
+
+        fileOutName = OUTPUT_DIR + '/' + ECOTYPE + '_' + str(sampleDepth) + FILE_SUFFIX + '.tsv'
+        print('Writing to file: ' + fileOutName)
+#        print(
+#            outputTable[(outputTable.T != 0).all()] # This is slow
+#        )
+        fileOut = open(fileOutName, 'w')
+        outputTable.to_csv(fileOut, sep='\t')
+        del outputTable
 
 if __name__ == "__main__":
     main()
