@@ -14,7 +14,7 @@ init:
 		-p 8036:3306 \
 		mysql/mysql-server:8.0
 
-populate:
+create-tables:
 	./init-rarefaction-db.sh
 
 cli:

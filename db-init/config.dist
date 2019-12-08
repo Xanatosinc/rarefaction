@@ -1,10 +1,18 @@
 #!/usr/bin/env make
 
-CWD=$(shell pwd)
-CFG="${CWD}/my.cnf"
-DATA="${CWD}/data"
+### DB Settings -- Required ###
 
 MYSQL_DB=""
 MYSQL_USER=""
 MYSQL_PASSWORD=""
 MYSQL_ROOT_PASSWORD=""
+
+### Safely leave the following to default values ###
+
+CWD=$(shell pwd)
+
+# Configuration file for setting up the Mysql DB
+CFG="${CWD}/my.cnf"
+
+# Location of DB internal files. If the container is killed and restarted, this will persist.
+DATA="${CWD}/data"

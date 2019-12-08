@@ -1,11 +1,14 @@
 #!/bin/bash
 
-CONTAINER="mysql1"
-
 if [ -f ./config ]; then
 	. ./config
 else
-	echo "config not found in init script."
+	echo "Config not found in init script."
+	exit 1
+fi
+
+if [ -z "${CONTAINER+x}" ]; then
+	echo "Container name not set."
 	exit 1
 fi
 
@@ -20,7 +23,7 @@ docker exec -it ${CONTAINER} mysql -u 'root' -p"${MYSQL_ROOT_PASSWORD}" -e " \
 	flush privileges;"
 
 echo "Creating tables."
-docker cp ./sql/migration.sql ${CONTAINER}:/migration.sql
+docker cp ./sql/create-tables.sql ${CONTAINER}:/create-tables.sql
 docker exec -it ${CONTAINER} bin/bash -c "cat /migration.sql | sed 's/#MYSQL_DB#/${MYSQL_DB}/' | mysql -u"${MYSQL_USER}" -p"${MYSQL_PASSWORD}
 
 echo "Done."

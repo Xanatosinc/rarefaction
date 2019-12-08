@@ -3,6 +3,11 @@
 from mysql.connector import connect
 import os, sys
 
+# populate.py
+# Connects to existing gene_reads database and inserts entries based on the data contained in
+# an input.tsv file given as a commandline argument.
+
+
 if len(sys.argv) != 2:
     exit('Usage: populate.py INPUT.TSV')
 
@@ -64,9 +69,6 @@ for line in open(filename, 'r'):
     readNumber  = str(int(readNumber))
     stationId = stations[station]
     records.append(str(geneId) + '_' + str(readNumber) + '_' + str(stationId))
-#cur.execute('SELECT id, gene_id, read_number, station_id FROM gene_reads')
-#for id, geneId, readNumber, stationId in cur.fetchall():
-#    records.append(str(geneId) + '_' + str(readNumber) + '_' + str(stationId))
 print("%s initial records" % len(records))
 
 # Process .tsv file
