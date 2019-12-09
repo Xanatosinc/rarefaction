@@ -11,7 +11,7 @@ init:
 		-e MYSQL_USER=${MYSQL_USER} \
 		-e MYSQL_PASSWORD=${MYSQL_PASSWORD} \
 		-e MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD} \
-		-p 8036:3306 \
+		-p ${HOST_PORT}:3306 \
 		mysql/mysql-server:8.0
 
 create-tables:
