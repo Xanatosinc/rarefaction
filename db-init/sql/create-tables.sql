@@ -20,11 +20,11 @@ USE `#MYSQL_DB#` ;
 -- -----------------------------------------------------
 -- Table `#MYSQL_DB#`.`ecotypes`
 -- -----------------------------------------------------
-CREATE TABLE `#MYSQL_DB#`.`ecotypes` (
+CREATE TABLE IF NOT EXISTS `#MYSQL_DB#`.`ecotypes` (
 	  `id` SMALLINT UNSIGNED NOT NULL AUTO_INCREMENT,
 	  `name` VARCHAR(191) NULL,
 	  PRIMARY KEY (`id`),
-	  UNIQUE INDEX `name_UNIQUE` (`name` ASC) VISIBLE);
+	  UNIQUE INDEX `name_UNIQUE` (`name` ASC) VISIBLE)
 	ENGINE = InnoDB
 	DEFAULT CHARACTER SET = utf8mb4
 	COLLATE = utf8mb4_0900_ai_ci;
@@ -39,13 +39,17 @@ CREATE TABLE IF NOT EXISTS `#MYSQL_DB#`.`contigs` (
 	  `ecotype_id` SMALLINT UNSIGNED NOT NULL,
 	  PRIMARY KEY (`id`),
 	  UNIQUE INDEX `contigs_name_UNIQUE` (`name` ASC) VISIBLE)
+	  INDEX `contigs_ecotypes_fk_idx` (`ecotype_id` ASC) VISIBLE,
+	  CONSTRAINT `contigs_ecotypes_fk`
+	    FOREIGN KEY (`ecotype_id`)
+	    REFERENCES `#MYSQL_DB#`.`ecotypes` (`id`)
 	ENGINE = InnoDB
 	DEFAULT CHARACTER SET = utf8mb4
 	COLLATE = utf8mb4_0900_ai_ci;
 
 
 -- -----------------------------------------------------
--- Table `#MYSQL_DB#`.`gene_reads`
+-- Table `#MYSQL_DB#`.`genes`
 -- -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS `#MYSQL_DB#`.`genes` (
 	  `gene_id` MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -54,7 +58,7 @@ CREATE TABLE IF NOT EXISTS `#MYSQL_DB#`.`genes` (
 	  PRIMARY KEY (`gene_id`),
 	  INDEX `genes_ecotypes_fk_idx` (`ecotype_id` ASC) VISIBLE,
 	  CONSTRAINT `genes_ecotypes_fk`
-	    FOREIGN KEY (`genes_ecotypes`)
+            FOREIGN KEY (`ecotype_id`)
 	    REFERENCES `#MYSQL_DB#`.`ecotypes` (`id`)
 	)
 	ENGINE = InnoDB
@@ -91,14 +95,14 @@ CREATE TABLE IF NOT EXISTS `#MYSQL_DB#`.`gene_reads` (
 	  INDEX `gene_reads_stations_fk_idx` (`station_id` ASC) VISIBLE,
 	  INDEX `gene_reads_contigs_fk_idx` (`contig_id` ASC) VISIBLE,
 	  INDEX `gene_reads_genes_fk_idx` (`gene_id` ASC) VISIBLE,
-	  CONSTRAINT `contig_fk`
-	    FOREIGN KEY (`gene_reads_contigs`)
+	  CONSTRAINT `gene_reads_contigs_fk`
+            FOREIGN KEY (`contig_id`)
 	    REFERENCES `#MYSQL_DB#`.`contigs` (`id`),
-	  CONSTRAINT `station_fk`
-	    FOREIGN KEY (`gene_reads_stations`)
+	  CONSTRAINT `gene_reads_stations_fk`
+            FOREIGN KEY (`station_id`)
 	    REFERENCES `#MYSQL_DB#`.`stations` (`id`),
-	  CONSTRAINT `genes_fk`
-	    FOREIGN KEY (`gene_reads_genes`)
+	  CONSTRAINT `gene_reads_genes_fk`
+            FOREIGN KEY (`gene_id`)
 	    REFERENCES `#MYSQL_DB#`.`genes` (`gene_id`)
         )
 	ENGINE = InnoDB

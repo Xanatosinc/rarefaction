@@ -24,6 +24,6 @@ docker exec -it ${CONTAINER} mysql -u 'root' -p"${MYSQL_ROOT_PASSWORD}" -e " \
 
 echo "Creating tables."
 docker cp ./sql/create-tables.sql ${CONTAINER}:/create-tables.sql
-docker exec -it ${CONTAINER} bin/bash -c "cat /migration.sql | sed 's/#MYSQL_DB#/${MYSQL_DB}/' | mysql -u"${MYSQL_USER}" -p"${MYSQL_PASSWORD}
+docker exec -it ${CONTAINER} bin/bash -c "cat /create-tables.sql | sed 's/#MYSQL_DB#/${MYSQL_DB}/' | mysql -u"${MYSQL_USER}" -p"${MYSQL_PASSWORD}
 
 echo "Done."
