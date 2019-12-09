@@ -5,6 +5,11 @@ Run `make run` to enter into the container, then run the python scripts as given
 
 ## Populate
 
+### Ecotypes, Genes
+
+`python import-genes-ecotypes.py INPUT.TSV`
+
+### Gene Reads
 `python populate.py INPUT.TSV`
 
 Script to populate mysql database with data from biopython output. Namely, the .tsv file containing the following columns:
@@ -15,7 +20,9 @@ Script to populate mysql database with data from biopython output. Namely, the .
 `Read_Length`
 `GC_Content`
 
-The `contigs`, `gene_reads`, and `stations` tables  found in the `mysql1` container will be populated with this script.
+THIS SHOULD BE RUN AFTER POPULATING `ecotypes` AND `genes` TABLES.
+
+The `gene_reads` and `stations` tables  found in the `mysql1` container will be populated with this script.
 
 This assumes uniqueness across gene_id, read_number, and Station.
 
