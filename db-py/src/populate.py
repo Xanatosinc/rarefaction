@@ -49,6 +49,7 @@ def insert_station(con, station):
 def load_genes(con):
     genes = {}
 
+
 def load_stations(con):
     stations = {}
     cur = con.cursor()

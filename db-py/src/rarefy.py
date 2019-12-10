@@ -132,6 +132,8 @@ def main():
     cur.execute('SELECT id, name FROM stations')
     stations = {id: name for id, name in cur.fetchall()}
 
+    maxStationNameLength = max(len(x) for x in stations.values())
+
     # Generate blank dataframes
     outputTables = {}
     for sampleDepth in DEPTHS:
@@ -157,7 +159,7 @@ def main():
 
                 # Print out elapsed time information
                 previousStationTime = printTimeInfo(START_TIME, previousStationTime)
-                sys.stdout.write('\t%s' % stationPoolName)
+                sys.stdout.write('\t%s' % stationPoolName.ljust(maxStationNameLength, ' '))
 
                 # Do the calculating
                 for sampleDepth in DEPTHS:
