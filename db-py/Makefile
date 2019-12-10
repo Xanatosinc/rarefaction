@@ -10,7 +10,7 @@ build:
 
 run:
 	@docker run --rm -it \
-		--network container:mysql1 \
+		--network container:${CONTAINER} \
 		-e MYSQL_DB=${MYSQL_DB} \
 		-e MYSQL_USER=${MYSQL_USER} \
 		-e MYSQL_PASS=${MYSQL_PASS} \
