@@ -16,7 +16,10 @@ POOL_SIZE = 50
 import multiprocessing as mp
 from datetime import datetime as dt
 from mysql.connector import connect
-import os, pandas as pd, sys
+import os
+import pandas as pd
+from pathvalidate import (sanitize_filename as sfn, sanitize_filepath as sfp)
+import sys
 import pytz
 
 TZ = pytz.timezone('US/Pacific')
@@ -85,7 +88,7 @@ def printTimeInfo(startTime, prevTime):
     stationTime = dt.now(TZ)
     totalElapsedSeconds = round((stationTime - startTime).total_seconds())
     elapsedSinceStation = round((stationTime - prevTime).total_seconds(), 1)
-    sys.stdout.write('\n[T+%s s]\t[^%s s]' % (
+    sys.stdout.write('\t[T+%s s]\t[^%s s]' % (
         str(totalElapsedSeconds).rjust(8, ' '),
         str(elapsedSinceStation).rjust(7, ' '),
     ))
@@ -121,6 +124,8 @@ def main():
     if ECOTYPE not in ecotypes:
         exit('Ecotype "%s" not found in database. Ecotypes found: %s' % (ECOTYPE, ', '.join([*ecotypes])))
 
+    print('### %s ###' % ECOTYPE)
+
     ecotypeId = ecotypes[ECOTYPE]
 
     # Length of genes based on reference sequence
@@ -146,6 +151,7 @@ def main():
     stationPool = {} # id: name
     stationsRunCount = 0
     sys.stdout.write('[%s]\n' % START_TIME)
+    stationIndex = 0
     for stationId, stationName in stations.items():
 
         # Add to stationPool
@@ -156,6 +162,10 @@ def main():
             df = dfFromQuery(con, ecotypeId, stationPool)
 
             for stationPoolId, stationPoolName in stationPool.items():
+                stationIndex += 1
+
+                # Print which station we're on
+                sys.stdout.write('\n(%4d/%4d)' % (stationIndex, len(stations)))
 
                 # Print out elapsed time information
                 previousStationTime = printTimeInfo(START_TIME, previousStationTime)
@@ -167,6 +177,8 @@ def main():
                     replicantDepthStation = populateOutputTable(
                         df, ecotypeId, sampleDepth, stationPoolId, stationPoolName, geneLengths, REPLICANTS
                     )
+
+                    # Put the calculated values in our output tables
                     for replicant, stationSeries in replicantDepthStation.items():
                         outputTables[sampleDepth][replicant][stationPoolName] = stationSeries
                         del stationSeries
@@ -178,7 +190,9 @@ def main():
     print()
     for sampleDepth in DEPTHS:
         for replicant in REPLICANTS:
-            fileOutName = OUTPUT_DIR + '/' + ECOTYPE + '_' + str(sampleDepth) + '_' + replicant + '.tsv'
+            fileOutName = sfp(
+                OUTPUT_DIR + '/' + sfn(ECOTYPE) + '_' + str(sampleDepth) + '_' + sfn(replicant) + '.tsv'
+            )
             print('Writing to file: ' + fileOutName)
             fileOut = open(fileOutName, 'w')
             outputTables[sampleDepth][replicant].to_csv(fileOut, sep='\t')
