@@ -97,7 +97,8 @@ def main():
     # Parse command line arguments
     parser = argparse.ArgumentParser(description='''
         Pull data from database and calculate coverage per ecotype per station per gene.
-        Stations that have a summed read_length less than the defined THRESHOLD value are ignored.
+        Ecotype-Stations that have gene reads less than the sample depth value are ignored.
+        Since this involves a random sampling, these calculations will be performed multiple times, once per replicant.
     ''', usage='rarefy.py [-h] ECOTYPE --replicants REPLICANT [REPLICANT ...] --depths DEPTH [DEPTH ...]')
     parser.add_argument('ecotype', metavar='ECOTYPE',
             help='The ecotype to be analyzed')
@@ -109,10 +110,11 @@ def main():
 
     args = parser.parse_args()
 
+    # Check output directory
     if not (os.access(OUTPUT_DIR, os.W_OK) and os.path.isdir(OUTPUT_DIR)):
         exit('Problem with output directory %s. Ensure it exists and is writeable.' % OUTPUT_DIR)
 
-    print('### %s ###' % ECOTYPE)
+    print('### %s ###' % args.ecotype)
 
     # Connect to MySQL DB
     con = connect(
@@ -127,10 +129,10 @@ def main():
     cur.execute('SELECT id, name FROM ecotypes')
     ecotypes = {name: id for id, name in cur.fetchall()}
 
-    if ECOTYPE not in ecotypes:
-        exit('Ecotype "%s" not found in database. Ecotypes found: %s' % (ECOTYPE, ', '.join([*ecotypes])))
+    if args.ecotype not in ecotypes:
+        exit('Ecotype "%s" not found in database. Ecotypes found: %s' % (args.ecotype, ', '.join([*ecotypes])))
 
-    ecotypeId = ecotypes[ECOTYPE]
+    ecotypeId = ecotypes[args.ecotype]
 
     # Length of genes based on reference sequence
     print('Fetching Gene Lengths')
@@ -195,7 +197,7 @@ def main():
     for sampleDepth in args.depths:
         for replicant in args.replicants:
             fileOutName = sfp(
-                OUTPUT_DIR + '/' + sfn(ECOTYPE) + '_' + str(sampleDepth) + '_' + sfn(replicant) + '.tsv'
+                OUTPUT_DIR + '/' + sfn(args.ecotype) + '_' + str(sampleDepth) + '_' + sfn(replicant) + '.tsv'
             )
             print('Writing to file: ' + fileOutName)
             fileOut = open(fileOutName, 'w')
