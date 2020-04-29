@@ -39,6 +39,9 @@ Where /app/data maps to the directory defined in `config`, which contains the sp
 
 `python rarefy.py ECOTYPE "rep1 rep2"`
 
+NB: You can use `seq` to create a sequence of numbers, to serve as a list of replicants. eg.:
+`time src/python rarefy.py HLII --r $(seq -w -s ' ' 01 30) --d 50000`
+
 * (Sample depths defined in rarefy.py)
 
 * ECOTYPE: The name of the ecotype to be run.
