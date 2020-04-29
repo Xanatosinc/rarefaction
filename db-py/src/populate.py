@@ -4,12 +4,12 @@
 # Connects to existing gene_reads database and inserts entries based on the data contained in
 # an input.tsv file given as a commandline argument.
 # Checks for presence of stations as it goes and inserts them as needed.
-# NOTE: does not do this for genes (or ecotypes). Use import-genes-ecotypes.py first for that.
+# NOTE: does not insert genes or ecotypes as needed. Use import-genes-ecotypes.py first for that.
 
-from mysql.connector import connect
+from mysql.connector import connect, errors as mysqlErrors
 import os, sys
 
-POOL_SIZE = 100
+POOL_SIZE = 50
 
 # Establish order of table columns
 GENE_READNUM_COL = 0
@@ -20,6 +20,17 @@ GC_COL           = 5
 # Print '.' or '+' for each Pool, depending on whether at least one row was inserted.
 PROGRESS = 1
 
+
+def deadlock_safe_execute(cur, sql):
+    try:
+        cur.execute(sql)
+    except mysqlErrors.InternalError as e:
+        if e.errno == 1213:
+            deadlock_safe_execute(cur, sql)
+        else:
+            print(e)
+
+
 def insert_gene_reads(con, sqlValues):
     cur = con.cursor()
     sql = """
@@ -27,7 +38,9 @@ def insert_gene_reads(con, sqlValues):
             (gene_id, read_number, station_id, read_length, gc_content)
         VALUES
     """ + ', '.join(sqlValues)
-    cur.execute(sql)
+
+    deadlock_safe_execute(cur, sql)
+
     if PROGRESS:
         if cur.lastrowid == 0:
             sys.stdout.write('.')
@@ -39,7 +52,7 @@ def insert_gene_reads(con, sqlValues):
 
 def insert_station(con, station):
     cur = con.cursor()
-    cur.execute('INSERT INTO stations (name) VALUE (%s)', (station,))
+    cur.execute('INSERT INTO stations (name) VALUE (%s)' % station)
     id = cur.lastrowid
     con.commit()
     cur.close()

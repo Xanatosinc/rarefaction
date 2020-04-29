@@ -1,1 +1,1 @@
-for i in $(seq -w $1 $2) ; do time python src/populate.py data/table-split/${i} ; done
+for i in $(seq -w $1 $2) ; do time python src/populate.py input/table-split/${i} ; done
