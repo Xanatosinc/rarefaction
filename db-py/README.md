@@ -3,6 +3,9 @@
 Docker container to run Python scripts to populate, then use, the database.
 Run `make run` to enter into the container, then run the python scripts as given below.
 
+IMPORTANT: Each script being run uses input files. `make run` runs a container which has access to an INPUT_DIR,
+defined as a variable in the config. Certain scripts, such as rarefy.py, also make use of the OUTPUT_DIR.
+
 ## Populate
 
 ### Ecotypes, Genes
@@ -37,8 +40,8 @@ Run `make build` to build image, `make run` to run container with shell.
 This .tsv file can be split into parts and consumed piecewise, for a large dataset this is recommended.
 
 When splitting, use a bash for loop within the container to populate the db with the included python script, eg.:
-`for file in $(ls /app/data/*) ; do python src/populate.py ${file} ; done`
-Where /app/data maps to the directory defined in `config`, which contains the split .tsv files.
+`for file in $(ls /app/input/*) ; do python src/populate.py ${file} ; done`
+Where /app/input maps to the directory defined in the config file (as `INPUT_DIR`), which contains the split .tsv files.
 
 
 ## Rarefy
