@@ -29,3 +29,8 @@ rootcli:
 	@docker exec -it \
 		${CONTAINER_NAME} \
 		mysql -uroot -p${MYSQL_ROOT_PASS}
+
+sh:
+	@docker exec -it \
+		${CONTAINER_NAME} \
+		sh

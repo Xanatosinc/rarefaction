@@ -13,7 +13,7 @@ Data will persist in data/ directory if container is killed / removed.
 
 Run `make init` to create the container and the database, and authenticate to it.
 
-Run `make populate` to run the .sql file to generate the tables. No data are entered yet.
+Run `make create-tables` to run the .sql file to generate the tables. No data are entered yet.
 
 ## Other commands ##
 
