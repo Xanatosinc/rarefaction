@@ -8,6 +8,12 @@ Run `make run` to enter into the container, then run the python scripts as given
 ### Ecotypes, Genes
 
 `python import-genes-ecotypes.py INPUT.TSV`
+Read data from a three-column .tsv: [gene_id \t length \t ecotype]
+
+Where first column is the gene_id, and the second column is its length in nucleotides, and the third column is its ecotype.
+
+Inserts that data into `ecotypes` and `genes` mysql tables.
+
 
 ### Gene Reads
 `python populate.py INPUT.TSV`
@@ -40,7 +46,7 @@ Where /app/data maps to the directory defined in `config`, which contains the sp
 `python rarefy.py ECOTYPE "rep1 rep2"`
 
 NB: You can use `seq` to create a sequence of numbers, to serve as a list of replicants. eg.:
-`time src/python rarefy.py HLII --r $(seq -w -s ' ' 01 30) --d 50000`
+`time python src/rarefy.py HLII --r $(seq -w -s ' ' 01 30) --d 50000`
 
 * (Sample depths defined in rarefy.py)
 
