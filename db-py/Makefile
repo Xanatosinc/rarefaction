@@ -1,4 +1,4 @@
-include config
+include ../config
 
 PWD=$(shell pwd)
 
@@ -10,13 +10,13 @@ build:
 
 run:
 	@docker run --rm -it \
-		--network container:mysql1 \
+		--network container:${CONTAINER_NAME} \
 		-e MYSQL_DB=${MYSQL_DB} \
 		-e MYSQL_USER=${MYSQL_USER} \
 		-e MYSQL_PASS=${MYSQL_PASS} \
 		-e MYSQL_PORT=${MYSQL_PORT} \
 		-v ${PWD}/src:/app/src/:z,ro \
-		-v ${INPUT_DIR}:/app/data/:z,ro \
+		-v ${INPUT_DIR}:/app/input/:z,ro \
 		-v ${OUTPUT_DIR}:/app/output/:z \
 		db-py \
 		sh

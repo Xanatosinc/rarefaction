@@ -3,8 +3,22 @@
 Docker container to run Python scripts to populate, then use, the database.
 Run `make run` to enter into the container, then run the python scripts as given below.
 
+IMPORTANT: Each script being run uses input files. `make run` runs a container which has access to an INPUT_DIR,
+defined as a variable in the config. Certain scripts, such as rarefy.py, also make use of the OUTPUT_DIR.
+
 ## Populate
 
+### Ecotypes, Genes
+
+`python import-genes-ecotypes.py INPUT.TSV`
+Read data from a three-column .tsv: [gene_id \t length \t ecotype]
+
+Where first column is the gene_id, and the second column is its length in nucleotides, and the third column is its ecotype.
+
+Inserts that data into `ecotypes` and `genes` mysql tables.
+
+
+### Gene Reads
 `python populate.py INPUT.TSV`
 
 Script to populate mysql database with data from biopython output. Namely, the .tsv file containing the following columns:
@@ -15,7 +29,9 @@ Script to populate mysql database with data from biopython output. Namely, the .
 `Read_Length`
 `GC_Content`
 
-The `contigs`, `gene_reads`, and `stations` tables  found in the `mysql1` container will be populated with this script.
+THIS SHOULD BE RUN AFTER POPULATING `ecotypes` AND `genes` TABLES.
+
+The `gene_reads` and `stations` tables  found in the `mysql1` container will be populated with this script.
 
 This assumes uniqueness across gene_id, read_number, and Station.
 
@@ -24,13 +40,16 @@ Run `make build` to build image, `make run` to run container with shell.
 This .tsv file can be split into parts and consumed piecewise, for a large dataset this is recommended.
 
 When splitting, use a bash for loop within the container to populate the db with the included python script, eg.:
-`for file in $(ls /app/data/*) ; do python src/populate.py ${file} ; done`
-Where /app/data maps to the directory defined in `config`, which contains the split .tsv files.
+`for file in $(ls /app/input/*) ; do python src/populate.py ${file} ; done`
+Where /app/input maps to the directory defined in the config file (as `INPUT_DIR`), which contains the split .tsv files.
 
 
 ## Rarefy
 
 `python rarefy.py ECOTYPE "rep1 rep2"`
+
+NB: You can use `seq` to create a sequence of numbers, to serve as a list of replicants. eg.:
+`time python src/rarefy.py HLII --r $(seq -w -s ' ' 01 30) --d 50000`
 
 * (Sample depths defined in rarefy.py)
 

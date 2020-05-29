@@ -1,1 +1,0 @@
-for file in $(ls /app/data/*) ; do time python src/populate.py ${file} ; done

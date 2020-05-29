@@ -8,16 +8,17 @@
 # NOTE: This version queries each depth, each station -- so it uses less memory, but is SLOWER.
 # This should only be used on very large ecotypes, if the other version uses too much memory.
 
-# Number of gene_reads randomly sampled per station per ecotype
-DEPTHS = [10000, 25000, 50000, 75000, 100000]
+OUTPUT_DIR = '/app/output'
+POOL_SIZE = 30
 
-POOL_SIZE = 50
-
-import multiprocessing as mp
+import argparse
 from datetime import datetime as dt
 from mysql.connector import connect
-import os, pandas as pd, sys
+import os
+import pandas as pd
+from pathvalidate import (sanitize_filename as sfn, sanitize_filepath as sfp)
 import pytz
+import sys
 
 TZ = pytz.timezone('US/Pacific')
 
@@ -85,25 +86,35 @@ def printTimeInfo(startTime, prevTime):
     stationTime = dt.now(TZ)
     totalElapsedSeconds = round((stationTime - startTime).total_seconds())
     elapsedSinceStation = round((stationTime - prevTime).total_seconds(), 1)
-    sys.stdout.write('\n[T+%s s]\t[^%s s]' % (
+    sys.stdout.write('\t[T+%s s]\t[^%s s]' % (
         str(totalElapsedSeconds).rjust(8, ' '),
         str(elapsedSinceStation).rjust(7, ' '),
     ))
     return stationTime
 
 def main():
-    if len(sys.argv) not in (2, 3):
-        exit('Usage: rarefy.py ECOTYPE')
 
-    ECOTYPE = sys.argv[1]
-    OUTPUT_DIR = '/app/output'
+    # Parse command line arguments
+    parser = argparse.ArgumentParser(description='''
+        Pull data from database and calculate coverage per ecotype per station per gene.
+        Ecotype-Stations that have gene reads less than the sample depth value are ignored.
+        Since this involves a random sampling, these calculations will be performed multiple times, once per replicant.
+    ''', usage='rarefy.py [-h] ECOTYPE --replicants REPLICANT [REPLICANT ...] --depths DEPTH [DEPTH ...]')
+    parser.add_argument('ecotype', metavar='ECOTYPE',
+            help='The ecotype to be analyzed')
+    flag_req = parser.add_argument_group(title='required flag arguments')
+    flag_req.add_argument('--replicants', required=True, metavar='REPLICANT', nargs='+',
+            help='Series of replicant names used as file suffixes')
+    flag_req.add_argument('--depths', required=True, metavar='DEPTH', type=int, nargs='+',
+            help='Sample depths to be considered')
 
-    # If second argument is given, use as suffixes for file name (eg. "a", "a b", etc.)
-    REPLICANTS = sys.argv[2].split(' ') if len(sys.argv) == 3 else ''
+    args = parser.parse_args()
 
+    # Check output directory
     if not (os.access(OUTPUT_DIR, os.W_OK) and os.path.isdir(OUTPUT_DIR)):
         exit('Problem with output directory %s. Ensure it exists and is writeable.' % OUTPUT_DIR)
 
+    print('### %s ###' % args.ecotype)
 
     # Connect to MySQL DB
     con = connect(
@@ -114,14 +125,14 @@ def main():
     cur = con.cursor()
 
     # Fetch ecotypes, verify input
-    ecotypes = {} # name => id
+    print('Fetching Ecotypes')
     cur.execute('SELECT id, name FROM ecotypes')
-    for ecotypeId, ecotypeName in cur.fetchall():
-        ecotypes[ecotypeName] = ecotypeId
-    if ECOTYPE not in ecotypes:
-        exit('Ecotype "%s" not found in database. Ecotypes found: %s' % (ECOTYPE, ', '.join([*ecotypes])))
+    ecotypes = {name: id for id, name in cur.fetchall()}
 
-    ecotypeId = ecotypes[ECOTYPE]
+    if args.ecotype not in ecotypes:
+        exit('Ecotype "%s" not found in database. Ecotypes found: %s' % (args.ecotype, ', '.join([*ecotypes])))
+
+    ecotypeId = ecotypes[args.ecotype]
 
     # Length of genes based on reference sequence
     print('Fetching Gene Lengths')
@@ -132,11 +143,13 @@ def main():
     cur.execute('SELECT id, name FROM stations')
     stations = {id: name for id, name in cur.fetchall()}
 
+    maxStationNameLength = max(len(x) for x in stations.values())
+
     # Generate blank dataframes
     outputTables = {}
-    for sampleDepth in DEPTHS:
+    for sampleDepth in args.depths:
         outputTables[sampleDepth] = {}
-        for rep in REPLICANTS:
+        for rep in args.replicants:
             outputTables[sampleDepth][rep] = pd.DataFrame(index=geneLengths.index)
 
     START_TIME = previousStationTime = dt.now(TZ)
@@ -144,6 +157,7 @@ def main():
     stationPool = {} # id: name
     stationsRunCount = 0
     sys.stdout.write('[%s]\n' % START_TIME)
+    stationIndex = 0
     for stationId, stationName in stations.items():
 
         # Add to stationPool
@@ -154,17 +168,23 @@ def main():
             df = dfFromQuery(con, ecotypeId, stationPool)
 
             for stationPoolId, stationPoolName in stationPool.items():
+                stationIndex += 1
+
+                # Print which station we're on
+                sys.stdout.write('\n(%4d/%4d)' % (stationIndex, len(stations)))
 
                 # Print out elapsed time information
                 previousStationTime = printTimeInfo(START_TIME, previousStationTime)
-                sys.stdout.write('\t%s' % stationPoolName)
+                sys.stdout.write('\t%s' % stationPoolName.ljust(maxStationNameLength, ' '))
 
                 # Do the calculating
-                for sampleDepth in DEPTHS:
+                for sampleDepth in args.depths:
 
                     replicantDepthStation = populateOutputTable(
-                        df, ecotypeId, sampleDepth, stationPoolId, stationPoolName, geneLengths, REPLICANTS
+                        df, ecotypeId, sampleDepth, stationPoolId, stationPoolName, geneLengths, args.replicants
                     )
+
+                    # Put the calculated values in our output tables
                     for replicant, stationSeries in replicantDepthStation.items():
                         outputTables[sampleDepth][replicant][stationPoolName] = stationSeries
                         del stationSeries
@@ -174,9 +194,11 @@ def main():
             stationPool = {}
 
     print()
-    for sampleDepth in DEPTHS:
-        for replicant in REPLICANTS:
-            fileOutName = OUTPUT_DIR + '/' + ECOTYPE + '_' + str(sampleDepth) + '_' + replicant + '.tsv'
+    for sampleDepth in args.depths:
+        for replicant in args.replicants:
+            fileOutName = sfp(
+                OUTPUT_DIR + '/' + sfn(args.ecotype) + '_' + str(sampleDepth) + '_' + sfn(replicant) + '.tsv'
+            )
             print('Writing to file: ' + fileOutName)
             fileOut = open(fileOutName, 'w')
             outputTables[sampleDepth][replicant].to_csv(fileOut, sep='\t')
