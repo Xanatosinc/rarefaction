@@ -34,7 +34,7 @@ def deadlock_safe_execute(cur, sql):
 def insert_gene_reads(con, sqlValues):
     cur = con.cursor()
     sql = """
-        INSERT IGNORE INTO gene_reads
+        INSERT IGNORE INTO `gene_reads`
             (gene_id, read_number, station_id, read_length, gc_content)
         VALUES
     """ + ', '.join(sqlValues)
@@ -52,7 +52,7 @@ def insert_gene_reads(con, sqlValues):
 
 def insert_station(con, station):
     cur = con.cursor()
-    cur.execute('INSERT INTO stations (name) VALUE (%s)' % station)
+    cur.execute('INSERT INTO `stations` (name) VALUE (\'%s\')' % station)
     id = cur.lastrowid
     con.commit()
     cur.close()
@@ -116,7 +116,7 @@ def main():
             record[GC_COL] = '99.9'
 
         sqlValues.append(
-            "(%s, %s, %s, %s, %s)" % (
+            "(\'%s\', \'%s\', \'%s\', \'%s\', \'%s\')" % (
                 geneId, readNumber, stationId, record[READ_LEN_COL], record[GC_COL]
             )
         )
