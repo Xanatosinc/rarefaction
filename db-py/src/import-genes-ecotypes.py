@@ -34,7 +34,7 @@ def load_genes(con):
 
 def insert_ecotype(con, ecotype):
     cur = con.cursor()
-    cur.execute('INSERT INTO %s (name) VALUE (%s)' % (ECOTYPES_TABLE_NAME, ecotype))
+    cur.execute('INSERT INTO `%s` (name) VALUES (\'%s\')' % (ECOTYPES_TABLE_NAME, ecotype))
     id = cur.lastrowid
     con.commit()
     cur.close()
