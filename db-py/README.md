@@ -39,6 +39,10 @@ Run `make build` to build image, `make run` to run container with shell.
 
 This .tsv file can be split into parts and consumed piecewise, for a large dataset this is recommended.
 
+```bash
+split -l 20000000 --numeric-suffixes input_filename output_prefix 
+```
+
 When splitting, use a bash for loop within the container to populate the db with the included python script, eg.:
 `for file in $(ls /app/input/*) ; do python src/populate.py ${file} ; done`
 Where /app/input maps to the directory defined in the config file (as `INPUT_DIR`), which contains the split .tsv files.
