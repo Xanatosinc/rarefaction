@@ -31,24 +31,6 @@ CREATE TABLE IF NOT EXISTS `#MYSQL_DB#`.`ecotypes` (
 
 
 -- -----------------------------------------------------
--- Table `#MYSQL_DB#`.`contigs`
--- -----------------------------------------------------
-CREATE TABLE IF NOT EXISTS `#MYSQL_DB#`.`contigs` (
-	  `id` SMALLINT UNSIGNED NOT NULL AUTO_INCREMENT,
-	  `name` VARCHAR(191) NOT NULL,
-	  `ecotype_id` SMALLINT UNSIGNED NOT NULL,
-	  PRIMARY KEY (`id`),
-	  UNIQUE INDEX `contigs_name_UNIQUE` (`name` ASC) VISIBLE)
-	  INDEX `contigs_ecotypes_fk_idx` (`ecotype_id` ASC) VISIBLE,
-	  CONSTRAINT `contigs_ecotypes_fk`
-	    FOREIGN KEY (`ecotype_id`)
-	    REFERENCES `#MYSQL_DB#`.`ecotypes` (`id`)
-	ENGINE = InnoDB
-	DEFAULT CHARACTER SET = utf8mb4
-	COLLATE = utf8mb4_0900_ai_ci;
-
-
--- -----------------------------------------------------
 -- Table `#MYSQL_DB#`.`genes`
 -- -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS `#MYSQL_DB#`.`genes` (

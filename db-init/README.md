@@ -9,7 +9,7 @@ Data will persist in data/ directory if container is killed / removed.
 
 ## Directions ##
 
-`cp config.dist config` and add in desired settings. The db credentials will need to match those in ../db-py/config.
+`cp config.dist config` and add in desired settings. The config file is located in ../config.dist
 
 Run `make init` to create the container and the database, and authenticate to it.
 

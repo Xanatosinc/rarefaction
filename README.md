@@ -1,4 +1,5 @@
 # Rarefaction
+In each step below, first read the README file and edit the associated config file 
 
 * anvio: Run Anvio docker containers in parallel. Currently used to map short reads to gene lists. Generates series of fasta files, one per gene.
 

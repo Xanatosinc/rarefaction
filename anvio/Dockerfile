@@ -1,4 +1,4 @@
-FROM docker.io/meren/anvio:latest
+FROM docker.io/meren/anvio:5.5
 
 COPY entrypoint.sh /app/entrypoint.sh
 
