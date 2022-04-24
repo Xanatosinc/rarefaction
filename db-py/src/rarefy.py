@@ -38,11 +38,11 @@ def df_from_query(con, ecotypeId, stationPool):
                        )
 
 
-def populate_output_table(df, ecotype_id, sample_depth, station_id, station_name, gene_lengths, replicants):
+def populate_output_table(df, ecotype_id, sample_depth, station_id, station_name, gene_lengths, replicates):
     output_series = {}
-    for replicant in replicants:
-        output_series[replicant] = pd.Series(index=gene_lengths.index)
-        output_series[replicant].values[:] = 0
+    for replicate in replicates:
+        output_series[replicate] = pd.Series(index=gene_lengths.index)
+        output_series[replicate].values[:] = 0
         station_df = df[df.station_id == station_id]
         station_read_count = len(station_df.index)
 
@@ -54,7 +54,7 @@ def populate_output_table(df, ecotype_id, sample_depth, station_id, station_name
 
         return output_series
 
-    for replicant in replicants:
+    for replicate in replicates:
         # Random sampling of this station's gene_reads
         sample_df = station_df.sample(n=sample_depth)
 
@@ -74,8 +74,8 @@ def populate_output_table(df, ecotype_id, sample_depth, station_id, station_name
         del gene_read_length_sums
 
         # Populate the output dataframe's stationName column with the calculated coverage
-        output_series[replicant] = grls['sum'] / grls['length']
-        output_series[replicant] = output_series[replicant].round(4)
+        output_series[replicate] = grls['sum'] / grls['length']
+        output_series[replicate] = output_series[replicate].round(4)
 
         del grls
 
@@ -102,9 +102,9 @@ def main():
             Pull data from database and calculate coverage per ecotype per station per gene.
             Ecotype-Stations that have gene reads less than the sample depth value are ignored.
             Since this involves a random sampling, these calculations will be performed multiple times, once per
-            replicant.
+            replicate.
         ''',
-        usage='rarefy.py [-h] ECOTYPE --replicants REPLICANT [REPLICANT ...] --depths DEPTH [DEPTH ...]'
+        usage='rarefy.py [-h] ECOTYPE --replicates REPLICANT [REPLICANT ...] --depths DEPTH [DEPTH ...]'
     )
     parser.add_argument(
         'ecotype',
@@ -113,11 +113,11 @@ def main():
     )
     flag_req = parser.add_argument_group(title='required flag arguments')
     flag_req.add_argument(
-        '--replicants',
+        '--replicates',
         required=True,
         metavar='REPLICANT',
         nargs='+',
-        help='Series of replicant names used as file suffixes'
+        help='Series of replicate names used as file suffixes'
     )
     flag_req.add_argument(
         '--depths',
@@ -170,7 +170,7 @@ def main():
     output_tables = {}
     for sample_depth in args.depths:
         output_tables[sample_depth] = {}
-        for rep in args.replicants:
+        for rep in args.replicates:
             output_tables[sample_depth][rep] = pd.DataFrame(index=gene_lengths.index)
 
     start_time = previous_station_time = dt.now(TZ)
@@ -201,13 +201,13 @@ def main():
                 # Do the calculating
                 for sample_depth in args.depths:
 
-                    replicant_depth_station = populate_output_table(
-                        df, ecotype_id, sample_depth, station_pool_id, station_pool_name, gene_lengths, args.replicants
+                    replicate_depth_station = populate_output_table(
+                        df, ecotype_id, sample_depth, station_pool_id, station_pool_name, gene_lengths, args.replicates
                     )
 
                     # Put the calculated values in our output tables
-                    for replicant, station_series in replicant_depth_station.items():
-                        output_tables[sample_depth][replicant][station_pool_name] = station_series
+                    for replicate, station_series in replicate_depth_station.items():
+                        output_tables[sample_depth][replicate][station_pool_name] = station_series
                         del station_series
             del df
             stations_run_count += len(station_pool)
@@ -215,13 +215,13 @@ def main():
 
     print()
     for sample_depth in args.depths:
-        for replicant in args.replicants:
+        for replicate in args.replicates:
             file_out_name = sfp(
-                OUTPUT_DIR + '/' + sfn(args.ecotype) + '_' + str(sample_depth) + '_' + sfn(replicant) + '.tsv'
+                OUTPUT_DIR + '/' + sfn(args.ecotype) + '_' + str(sample_depth) + '_' + sfn(replicate) + '.tsv'
             )
             print('Writing to file: ' + file_out_name)
             file_out = open(file_out_name, 'w')
-            output_tables[sample_depth][replicant].to_csv(file_out, sep='\t')
+            output_tables[sample_depth][replicate].to_csv(file_out, sep='\t')
         del output_tables[sample_depth]
 
     del output_tables
