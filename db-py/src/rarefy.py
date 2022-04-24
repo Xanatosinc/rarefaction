@@ -8,9 +8,6 @@
 # NOTE: This version queries each depth, each station -- so it uses less memory, but is SLOWER.
 # This should only be used on very large ecotypes, if the other version uses too much memory.
 
-OUTPUT_DIR = '/app/output'
-POOL_SIZE = 30
-
 import argparse
 from datetime import datetime as dt
 from mysql.connector import connect
@@ -20,10 +17,13 @@ from pathvalidate import (sanitize_filename as sfn, sanitize_filepath as sfp)
 import pytz
 import sys
 
+OUTPUT_DIR = '/app/output'
+POOL_SIZE = 30
 TZ = pytz.timezone('US/Pacific')
 
-def dfFromQuery(con, ecotypeId, stationPool):
-    stationIdsString = '(%s)' % ', '.join(str(x) for x in stationPool.keys())
+
+def df_from_query(con, ecotypeId, stationPool):
+    station_ids_string = '(%s)' % ', '.join(str(x) for x in stationPool.keys())
 
     # Simpler query through genes table
     return pd.read_sql('''
@@ -33,80 +33,100 @@ def dfFromQuery(con, ecotypeId, stationPool):
         WHERE 1=1
             AND g.ecotype_id = %s
             AND gr.station_id IN %s
-        ''' % (ecotypeId, stationIdsString),
-        con=con
-    )
+        ''' % (ecotypeId, station_ids_string),
+                       con=con
+                       )
 
-def populateOutputTable(df, ecotypeId, sampleDepth, stationId, stationName, geneLengths, replicants):
 
-    outputSeries = {}
+def populate_output_table(df, ecotype_id, sample_depth, station_id, station_name, gene_lengths, replicants):
+    output_series = {}
     for replicant in replicants:
-        outputSeries[replicant] = pd.Series(index=geneLengths.index)
-        outputSeries[replicant].values[:] = 0
-        stationDf = df[df.station_id == stationId]
-        stationReadCount = len(stationDf.index)
+        output_series[replicant] = pd.Series(index=gene_lengths.index)
+        output_series[replicant].values[:] = 0
+        station_df = df[df.station_id == station_id]
+        station_read_count = len(station_df.index)
 
     del df
 
     # If stationReadCount < sampleDepth, zerofill the station
-    if stationReadCount < sampleDepth:
-        sys.stdout.write('\t!%s' % str(sampleDepth))
+    if station_read_count < sample_depth:
+        sys.stdout.write('\t!%s' % str(sample_depth))
 
-        return outputSeries
+        return output_series
 
     for replicant in replicants:
         # Random sampling of this station's gene_reads
-        sampleDf = stationDf.sample(n = sampleDepth)
+        sample_df = station_df.sample(n=sample_depth)
 
         # Sums of the `read_length` column for each gene for this station
-        geneReadLengthSums = sampleDf.groupby('gene_id')['read_length'].sum().reset_index(name = 'sum').set_index('gene_id')
+        gene_read_length_sums = sample_df.groupby('gene_id')['read_length'].sum().reset_index(name='sum') \
+            .set_index('gene_id')
 
         # The number of gene_reads for this gene in this station
-        uniqueGeneCount = sampleDf['gene_id'].nunique()
+        unique_gene_count = sample_df['gene_id'].nunique()
 
-        del sampleDf
+        del sample_df
 
         # Join sums of read lengths with gene reference lengths, so it has two columns: sum and length
-        grls = geneReadLengthSums.join(geneLengths, how='right')
+        grls = gene_read_length_sums.join(gene_lengths, how='right')
         grls.fillna(0, downcast='infer', inplace=True)
 
-        del geneReadLengthSums
+        del gene_read_length_sums
 
         # Populate the output dataframe's stationName column with the calculated coverage
-        outputSeries[replicant] = grls['sum'] / grls['length']
-        outputSeries[replicant] = outputSeries[replicant].round(4)
+        output_series[replicant] = grls['sum'] / grls['length']
+        output_series[replicant] = output_series[replicant].round(4)
 
         del grls
 
-    sys.stdout.write('\t %s' % str(sampleDepth))
+    sys.stdout.write('\t %s' % str(sample_depth))
 
-    return outputSeries
+    return output_series
 
-def printTimeInfo(startTime, prevTime):
-    stationTime = dt.now(TZ)
-    totalElapsedSeconds = round((stationTime - startTime).total_seconds())
-    elapsedSinceStation = round((stationTime - prevTime).total_seconds(), 1)
+
+def print_time_info(start_time, prev_time):
+    station_time = dt.now(TZ)
+    total_elapsed_seconds = round((station_time - start_time).total_seconds())
+    elapsed_since_station = round((station_time - prev_time).total_seconds(), 1)
     sys.stdout.write('\t[T+%s s]\t[^%s s]' % (
-        str(totalElapsedSeconds).rjust(8, ' '),
-        str(elapsedSinceStation).rjust(7, ' '),
+        str(total_elapsed_seconds).rjust(8, ' '),
+        str(elapsed_since_station).rjust(7, ' '),
     ))
-    return stationTime
+    return station_time
+
 
 def main():
-
     # Parse command line arguments
-    parser = argparse.ArgumentParser(description='''
-        Pull data from database and calculate coverage per ecotype per station per gene.
-        Ecotype-Stations that have gene reads less than the sample depth value are ignored.
-        Since this involves a random sampling, these calculations will be performed multiple times, once per replicant.
-    ''', usage='rarefy.py [-h] ECOTYPE --replicants REPLICANT [REPLICANT ...] --depths DEPTH [DEPTH ...]')
-    parser.add_argument('ecotype', metavar='ECOTYPE',
-            help='The ecotype to be analyzed')
+    parser = argparse.ArgumentParser(
+        description='''
+            Pull data from database and calculate coverage per ecotype per station per gene.
+            Ecotype-Stations that have gene reads less than the sample depth value are ignored.
+            Since this involves a random sampling, these calculations will be performed multiple times, once per
+            replicant.
+        ''',
+        usage='rarefy.py [-h] ECOTYPE --replicants REPLICANT [REPLICANT ...] --depths DEPTH [DEPTH ...]'
+    )
+    parser.add_argument(
+        'ecotype',
+        metavar='ECOTYPE',
+        help='The ecotype to be analyzed'
+    )
     flag_req = parser.add_argument_group(title='required flag arguments')
-    flag_req.add_argument('--replicants', required=True, metavar='REPLICANT', nargs='+',
-            help='Series of replicant names used as file suffixes')
-    flag_req.add_argument('--depths', required=True, metavar='DEPTH', type=int, nargs='+',
-            help='Sample depths to be considered')
+    flag_req.add_argument(
+        '--replicants',
+        required=True,
+        metavar='REPLICANT',
+        nargs='+',
+        help='Series of replicant names used as file suffixes'
+    )
+    flag_req.add_argument(
+        '--depths',
+        required=True,
+        metavar='DEPTH',
+        type=int,
+        nargs='+',
+        help='Sample depths to be considered'
+    )
 
     args = parser.parse_args()
 
@@ -132,82 +152,83 @@ def main():
     if args.ecotype not in ecotypes:
         exit('Ecotype "%s" not found in database. Ecotypes found: %s' % (args.ecotype, ', '.join([*ecotypes])))
 
-    ecotypeId = ecotypes[args.ecotype]
+    ecotype_id = ecotypes[args.ecotype]
 
     # Length of genes based on reference sequence
     print('Fetching Gene Lengths')
-    geneLengths = pd.read_sql('SELECT gene_id, length FROM genes WHERE ecotype_id = %s' % ecotypeId, con=con).set_index('gene_id')
+    gene_lengths = pd.read_sql('SELECT gene_id, length FROM genes WHERE ecotype_id = %s' % ecotype_id, con=con) \
+        .set_index('gene_id')
 
     # Fetch stations
     print('Fetching Stations')
     cur.execute('SELECT id, name FROM stations')
     stations = {id: name for id, name in cur.fetchall()}
 
-    maxStationNameLength = max(len(x) for x in stations.values())
+    max_station_name_length = max(len(x) for x in stations.values())
 
     # Generate blank dataframes
-    outputTables = {}
-    for sampleDepth in args.depths:
-        outputTables[sampleDepth] = {}
+    output_tables = {}
+    for sample_depth in args.depths:
+        output_tables[sample_depth] = {}
         for rep in args.replicants:
-            outputTables[sampleDepth][rep] = pd.DataFrame(index=geneLengths.index)
+            output_tables[sample_depth][rep] = pd.DataFrame(index=gene_lengths.index)
 
-    START_TIME = previousStationTime = dt.now(TZ)
+    start_time = previous_station_time = dt.now(TZ)
 
-    stationPool = {} # id: name
-    stationsRunCount = 0
-    sys.stdout.write('[%s]\n' % START_TIME)
-    stationIndex = 0
-    for stationId, stationName in stations.items():
+    station_pool = {}  # id: name
+    stations_run_count = 0
+    sys.stdout.write('[%s]\n' % start_time)
+    station_index = 0
+    for station_id, station_name in stations.items():
 
         # Add to stationPool
-        stationPool[stationId] = stationName
+        station_pool[station_id] = station_name
 
         # Perform calculations per station per depth, reset stationPool
-        if (len(stationPool) == POOL_SIZE) or (stationsRunCount + len(stationPool) == len(stations)):
-            df = dfFromQuery(con, ecotypeId, stationPool)
+        if (len(station_pool) == POOL_SIZE) or (stations_run_count + len(station_pool) == len(stations)):
+            df = df_from_query(con, ecotype_id, station_pool)
 
-            for stationPoolId, stationPoolName in stationPool.items():
-                stationIndex += 1
+            for station_pool_id, station_pool_name in station_pool.items():
+                station_index += 1
 
                 # Print which station we're on
-                sys.stdout.write('\n(%4d/%4d)' % (stationIndex, len(stations)))
+                sys.stdout.write('\n(%4d/%4d)' % (station_index, len(stations)))
 
                 # Print out elapsed time information
-                previousStationTime = printTimeInfo(START_TIME, previousStationTime)
-                sys.stdout.write('\t%s' % stationPoolName.ljust(maxStationNameLength, ' '))
+                previous_station_time = print_time_info(start_time, previous_station_time)
+                sys.stdout.write('\t%s' % station_pool_name.ljust(max_station_name_length, ' '))
 
                 # Do the calculating
-                for sampleDepth in args.depths:
+                for sample_depth in args.depths:
 
-                    replicantDepthStation = populateOutputTable(
-                        df, ecotypeId, sampleDepth, stationPoolId, stationPoolName, geneLengths, args.replicants
+                    replicant_depth_station = populate_output_table(
+                        df, ecotype_id, sample_depth, station_pool_id, station_pool_name, gene_lengths, args.replicants
                     )
 
                     # Put the calculated values in our output tables
-                    for replicant, stationSeries in replicantDepthStation.items():
-                        outputTables[sampleDepth][replicant][stationPoolName] = stationSeries
-                        del stationSeries
-
+                    for replicant, station_series in replicant_depth_station.items():
+                        output_tables[sample_depth][replicant][station_pool_name] = station_series
+                        del station_series
             del df
-            stationsRunCount += len(stationPool)
-            stationPool = {}
+            stations_run_count += len(station_pool)
+            station_pool = {}
 
     print()
-    for sampleDepth in args.depths:
+    for sample_depth in args.depths:
         for replicant in args.replicants:
-            fileOutName = sfp(
-                OUTPUT_DIR + '/' + sfn(args.ecotype) + '_' + str(sampleDepth) + '_' + sfn(replicant) + '.tsv'
+            file_out_name = sfp(
+                OUTPUT_DIR + '/' + sfn(args.ecotype) + '_' + str(sample_depth) + '_' + sfn(replicant) + '.tsv'
             )
-            print('Writing to file: ' + fileOutName)
-            fileOut = open(fileOutName, 'w')
-            outputTables[sampleDepth][replicant].to_csv(fileOut, sep='\t')
-        del outputTables[sampleDepth]
+            print('Writing to file: ' + file_out_name)
+            file_out = open(file_out_name, 'w')
+            output_tables[sample_depth][replicant].to_csv(file_out, sep='\t')
+        del output_tables[sample_depth]
 
-    del outputTables
+    del output_tables
 
     cur.close()
     con.close()
 
-if __name__ == "__main__":
+
+if __name__ == '__main__':
     main()
